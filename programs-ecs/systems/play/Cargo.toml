@@ -1,0 +1,28 @@
+[package]
+name = "play"
+version = "0.1.10"
+description = "Created with Bolt"
+edition = "2021"
+
+[lib]
+crate-type = ["cdylib", "lib"]
+name = "play"
+
+[features]
+no-entrypoint = []
+no-idl = []
+no-log-ix-name = []
+cpi = ["no-entrypoint"]
+default = []
+idl-build = ["anchor-lang/idl-build"]
+anchor-debug = ["anchor-lang/anchor-debug"]
+custom-heap = []
+custom-panic = []
+
+
+[dependencies]
+bolt-lang.workspace = true
+anchor-lang.workspace = true
+players.workspace = true
+grid.workspace = true
+serde = { version = "1.0", features = ["derive"] }
