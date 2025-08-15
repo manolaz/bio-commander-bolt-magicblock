@@ -1,0 +1,223 @@
+.bio-zone {
+    border: 3px solid #333;
+    border-radius: 15px;
+    padding: 20px;
+    margin: 20px;
+    background: rgba(0, 0, 0, 0.8);
+    position: relative;
+    
+    .zone-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 15px;
+        
+        h3 {
+            color: #fff;
+            font-size: 1.2em;
+            margin: 0;
+        }
+        
+        .zone-resources {
+            display: flex;
+            gap: 15px;
+            
+            span {
+                color: #fff;
+                font-size: 0.9em;
+                background: rgba(255, 255, 255, 0.1);
+                padding: 4px 8px;
+                border-radius: 12px;
+            }
+        }
+    }
+}
+
+.bio-grid {
+    display: grid;
+    grid-template-columns: repeat(16, 1fr);
+    gap: 2px;
+    max-width: 640px;
+    margin: 0 auto;
+}
+
+.bio-cell {
+    width: 35px;
+    height: 35px;
+    border: 1px solid #444;
+    border-radius: 3px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    position: relative;
+    transition: all 0.3s ease;
+    background: #1a1a1a;
+    
+    &:hover {
+        transform: scale(1.1);
+        border-color: #62fffc;
+        z-index: 10;
+    }
+    
+    .cell-icon {
+        font-size: 16px;
+        display: block;
+    }
+    
+    .health-bar {
+        position: absolute;
+        bottom: 1px;
+        left: 1px;
+        right: 1px;
+        height: 3px;
+        background: rgba(255, 0, 0, 0.3);
+        border-radius: 1px;
+        
+        .health-fill {
+            height: 100%;
+            background: linear-gradient(to right, #ff4444, #44ff44);
+            border-radius: 1px;
+            transition: width 0.3s ease;
+        }
+    }
+    
+    // Cell type styles
+    &.empty {
+        background: #1a1a1a;
+        border-color: #333;
+    }
+    
+    &.immune-cell {
+        background: linear-gradient(135deg, #4a90e2, #357abd);
+        border-color: #62fffc;
+        box-shadow: 0 0 8px rgba(98, 255, 252, 0.3);
+    }
+    
+    &.pathogen {
+        background: linear-gradient(135deg, #e74c3c, #c0392b);
+        border-color: #ff6b6b;
+        box-shadow: 0 0 8px rgba(255, 107, 107, 0.3);
+    }
+    
+    &.tissue {
+        background: linear-gradient(135deg, #8e44ad, #71368a);
+        border-color: #9b59b6;
+        box-shadow: 0 0 6px rgba(155, 89, 182, 0.2);
+    }
+    
+    &.blood-cell {
+        background: linear-gradient(135deg, #e67e22, #d35400);
+        border-color: #f39c12;
+        box-shadow: 0 0 6px rgba(243, 156, 18, 0.3);
+    }
+    
+    &.antibody {
+        background: linear-gradient(135deg, #27ae60, #229954);
+        border-color: #2ecc71;
+        box-shadow: 0 0 6px rgba(46, 204, 113, 0.3);
+    }
+    
+    // Player ownership styles
+    &.player-1 {
+        border-width: 2px;
+        border-style: solid;
+    }
+    
+    &.player-2 {
+        border-width: 2px;
+        border-style: dashed;
+    }
+}
+
+// Zone type styles
+.zone-circulatory {
+    border-color: #e74c3c;
+    background: linear-gradient(135deg, rgba(231, 76, 60, 0.1), rgba(192, 57, 43, 0.1));
+    
+    .zone-header h3 {
+        color: #e74c3c;
+    }
+}
+
+.zone-tissue {
+    border-color: #8e44ad;
+    background: linear-gradient(135deg, rgba(142, 68, 173, 0.1), rgba(113, 54, 138, 0.1));
+    
+    .zone-header h3 {
+        color: #8e44ad;
+    }
+}
+
+.zone-lymphatic {
+    border-color: #27ae60;
+    background: linear-gradient(135deg, rgba(39, 174, 96, 0.1), rgba(34, 153, 84, 0.1));
+    
+    .zone-header h3 {
+        color: #27ae60;
+    }
+}
+
+.zone-barrier {
+    border-color: #f39c12;
+    background: linear-gradient(135deg, rgba(243, 156, 18, 0.1), rgba(211, 84, 0, 0.1));
+    
+    .zone-header h3 {
+        color: #f39c12;
+    }
+}
+
+.zone-organ {
+    border-color: #9b59b6;
+    background: linear-gradient(135deg, rgba(155, 89, 182, 0.1), rgba(142, 68, 173, 0.1));
+    
+    .zone-header h3 {
+        color: #9b59b6;
+    }
+}
+
+.zone-connections {
+    margin-top: 10px;
+    
+    .connections {
+        font-size: 0.8em;
+        color: #ccc;
+        text-align: center;
+    }
+}
+
+// Responsive design
+@media (max-width: 768px) {
+    .bio-grid {
+        grid-template-columns: repeat(8, 1fr);
+        max-width: 320px;
+    }
+    
+    .bio-cell {
+        width: 30px;
+        height: 30px;
+        
+        .cell-icon {
+            font-size: 12px;
+        }
+    }
+    
+    .bio-zone {
+        padding: 10px;
+        margin: 10px;
+        
+        .zone-header {
+            flex-direction: column;
+            gap: 10px;
+            
+            .zone-resources {
+                gap: 8px;
+                
+                span {
+                    font-size: 0.8em;
+                    padding: 2px 6px;
+                }
+            }
+        }
+    }
+}

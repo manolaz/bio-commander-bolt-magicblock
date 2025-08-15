@@ -1,7 +1,9 @@
 import React, {useCallback, useEffect, useRef, useState} from "react";
 import {AnimatePresence, motion} from "framer-motion";
 import Button from "./components/Button";
-import Square from "./components/Square";
+import BioGrid, { CellType } from "./components/BioGrid";
+import UnitPanel from "./components/UnitPanel";
+import ZoneMinimap from "./components/ZoneMinimap";
 import {
     AddEntity,
     ApplySystem,
@@ -18,6 +20,7 @@ import {AccountInfo, PublicKey, Transaction} from "@solana/web3.js";
 import {BN, Program, Provider} from "@coral-xyz/anchor";
 import {SimpleProvider} from "./components/Wallet";
 import Active from "./components/Active";
+import { GameState, createInitialGameState, placeUnit, switchPlayer, generateResources, checkVictoryConditions } from "./utils/gameState";
 
 const WORLD_INSTANCE_ID = 1721;
 
@@ -34,6 +37,14 @@ const App: React.FC = () => {
     const provider = useRef<Provider>(new SimpleProvider(connection));
     anchor.setProvider(provider.current);
     const { publicKey, sendTransaction } = useWallet();
+    
+    // Bio Commander game state
+    const [gameState, setGameState] = useState<GameState>(createInitialGameState());
+    const [selectedUnit, setSelectedUnit] = useState<CellType | null>(null);
+    const [selectedZoneIndex, setSelectedZoneIndex] = useState<number>(0);
+    const [victoryResult, setVictoryResult] = useState<{winner?: string; reason?: string}>({});
+    
+    // Legacy tic-tac-toe state (kept for blockchain integration)
     const [squares, setSquares] = useState<string[]>(Array(9).fill(""));
     const [turn, setTurn] = useState<"x" | "o">("x");
     const [p1, setP1] = useState<boolean>(false);
@@ -108,6 +119,59 @@ const App: React.FC = () => {
             setWinner("x | o");
         }
     }, [squares] );
+
+    // Bio Commander game handlers
+    const handleCellClick = useCallback((row: number, col: number) => {
+        if (!selectedUnit || !publicKey) {
+            setTransactionError("Select a unit first");
+            return;
+        }
+        
+        const newGameState = placeUnit(gameState, gameState.zones[selectedZoneIndex].id, row, col, selectedUnit);
+        if (newGameState !== gameState) {
+            setGameState(newGameState);
+            setSelectedUnit(null);
+            
+            // Switch to next player after a short delay
+            setTimeout(() => {
+                setGameState(prev => switchPlayer(prev));
+            }, 500);
+        } else {
+            setTransactionError("Cannot place unit there");
+        }
+    }, [gameState, selectedUnit, selectedZoneIndex, publicKey]);
+
+    const handleUnitSelect = useCallback((unitType: CellType) => {
+        setSelectedUnit(unitType);
+    }, []);
+
+    const handleZoneSwitch = useCallback((direction: 'prev' | 'next') => {
+        if (direction === 'prev') {
+            setSelectedZoneIndex(prev => prev > 0 ? prev - 1 : gameState.zones.length - 1);
+        } else {
+            setSelectedZoneIndex(prev => prev < gameState.zones.length - 1 ? prev + 1 : 0);
+        }
+    }, [gameState.zones.length]);
+
+    const handleZoneSelect = useCallback((index: number) => {
+        setSelectedZoneIndex(index);
+    }, []);
+
+    const handleEndTurn = useCallback(() => {
+        const newState = generateResources(gameState);
+        const nextState = switchPlayer(newState);
+        const victory = checkVictoryConditions(nextState);
+        
+        setGameState(nextState);
+        setVictoryResult(victory);
+    }, [gameState]);
+
+    const resetBioCommanderGame = useCallback(() => {
+        setGameState(createInitialGameState());
+        setSelectedUnit(null);
+        setSelectedZoneIndex(0);
+        setVictoryResult({});
+    }, []);
 
     const updatePlayersComponent = useCallback((players: any) => {
         console.log("Updating players component", players);
@@ -336,53 +400,88 @@ const App: React.FC = () => {
         await submitTransaction(transaction);
     }, [publicKey, entityMatch, submitTransaction]);
 
+    const currentZone = gameState.zones[selectedZoneIndex];
+    const currentPlayerResources = gameState.globalResources[`player${gameState.currentPlayer}` as keyof typeof gameState.globalResources];
+
     return (
         <div className="bio-commander">
             <div className="wallet-buttons">
                 <WalletMultiButton />
             </div>
 
-            <h1> BIO COMMANDER </h1>
+            <h1>🧬 BIO COMMANDER 🦠</h1>
+            
+            <div className="game-info">
+                <div className="current-player">
+                    <h3>Player {gameState.currentPlayer} Turn</h3>
+                    <span className={`player-indicator player-${gameState.currentPlayer}`}>
+                        {gameState.currentPlayer === "1" ? "🛡️ Immune System" : "🦠 Pathogens"}
+                    </span>
+                </div>
+                <div className="turn-info">Turn: {gameState.turn}</div>
+            </div>
 
-            <Button title={"New Game"} resetGame={newGameTx} />
-            <div className="join-game">
-                <input
-                    type="text"
-                    placeholder="Enter Game ID"
-                    value={gameId.current?.toBase58()}
-                    onChange={handleGameIdChange}
-                />
-                <Button title={"Join"} resetGame={joinGameTx} />
-            </div>
-            <div className="game">
-                {Array.from("012345678").map((ind) => (
-                    <Square
-                        key={ind}
-                        ind={ind}
-                        updateSquares={updateSquares}
-                        clsName={squares[parseInt(ind, 10)]}
+            <div className="game-controls">
+                <Button title={"New Bio Game"} resetGame={resetBioCommanderGame} />
+                <Button title={"End Turn"} resetGame={handleEndTurn} />
+                <div className="join-game">
+                    <input
+                        type="text"
+                        placeholder="Enter Game ID"
+                        value={gameId.current?.toBase58() || ""}
+                        onChange={handleGameIdChange}
                     />
-                ))}
+                    <Button title={"Join"} resetGame={joinGameTx} />
+                </div>
             </div>
-            <div className={`turn ${turn === "x" ? "left" : "right"}`}>
-                <Square clsName="x" />
-                <Square clsName="o" />
+
+            <div className="main-game-area">
+                <div className="zone-controls">
+                    <Button title={"◀ Prev Zone"} resetGame={() => handleZoneSwitch('prev')} />
+                    <h3>{currentZone.name}</h3>
+                    <Button title={"Next Zone ▶"} resetGame={() => handleZoneSwitch('next')} />
+                </div>
+                
+                <div className="game-layout">
+                    <div className="left-panel">
+                        <UnitPanel
+                            selectedUnit={selectedUnit}
+                            onUnitSelect={handleUnitSelect}
+                            playerResources={currentPlayerResources}
+                            currentPlayer={gameState.currentPlayer}
+                        />
+                        
+                        <ZoneMinimap
+                            zones={gameState.zones}
+                            selectedZoneIndex={selectedZoneIndex}
+                            onZoneSelect={handleZoneSelect}
+                        />
+                    </div>
+                    
+                    <BioGrid
+                        zone={currentZone}
+                        onCellClick={handleCellClick}
+                        selectedUnit={selectedUnit}
+                        currentPlayer={gameState.currentPlayer}
+                    />
+                </div>
             </div>
+
             <div className={"active-div"}>
                 <Active clsName={`${p1 ? "on" : "off"}`} />
                 <Active clsName={`${p2 ? "on" : "off"}`} />
             </div>
             <AnimatePresence>
-                {winner && (
+                {victoryResult.winner && (
                     <motion.div
-                        key={"parent-box"}
+                        key={"victory-modal"}
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
                         exit={{ opacity: 0 }}
-                        className="winner"
+                        className="winner bio-victory"
                     >
                         <motion.div
-                            key={"child-box"}
+                            key={"victory-content"}
                             initial={{ scale: 0 }}
                             animate={{ scale: 1 }}
                             exit={{ scale: 0, opacity: 0 }}
@@ -398,41 +497,35 @@ const App: React.FC = () => {
                                         duration: 0.7,
                                     },
                                 }}
+                                className={`victory-title player-${victoryResult.winner}`}
                             >
-                                {winner === "x | o"
-                                    ? "No Winner :/"
-                                    : "Win !! :)"}
+                                {victoryResult.winner === "1" ? "🛡️ IMMUNE SYSTEM VICTORIOUS!" : "🦠 PATHOGENS TRIUMPHANT!"}
                             </motion.h2>
-                            <motion.div
-                                initial={{ scale: 0 }}
-                                animate={{
-                                    scale: 1,
-                                    transition: {
-                                        delay: 1.3,
-                                        duration: 0.2,
-                                    },
-                                }}
-                                className="win"
+                            <motion.p
+                                initial={{ opacity: 0 }}
+                                animate={{ opacity: 1, transition: { delay: 1 } }}
+                                className="victory-reason"
                             >
-                                {winner === "x | o" ? (
-                                    <>
-                                        <Square clsName="x" />
-                                        <Square clsName="o" />
-                                    </>
-                                ) : (
-                                    <>
-                                        <Square clsName={winner} />
-                                    </>
-                                )}
-                            </motion.div>
+                                {victoryResult.reason}
+                            </motion.p>
                             <motion.div
                                 initial={{ scale: 0 }}
                                 animate={{
                                     scale: 1,
                                     transition: { delay: 1.5, duration: 0.3 },
                                 }}
+                                className="victory-icon"
                             >
-                                <Button title={"New Game"} resetGame={resetGame} />
+                                {victoryResult.winner === "1" ? "🏆🛡️🏆" : "🏆🦠🏆"}
+                            </motion.div>
+                            <motion.div
+                                initial={{ scale: 0 }}
+                                animate={{
+                                    scale: 1,
+                                    transition: { delay: 2, duration: 0.3 },
+                                }}
+                            >
+                                <Button title={"New Bio Commander Game"} resetGame={resetBioCommanderGame} />
                             </motion.div>
                         </motion.div>
                     </motion.div>
