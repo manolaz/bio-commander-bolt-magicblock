@@ -17,6 +17,8 @@ import ActionPanel from "./components/ActionPanel";
 import ZoneMinimap from "./components/ZoneMinimap";
 import ZoneExpansion, { ExpansionType } from "./components/ZoneExpansion";
 import ResourceManager from "./components/ResourceManager";
+import { ZoneManager } from "./components/ZoneManager";
+import { ZoneGrid } from "./components/ZoneGrid";
 
 // Types and Services
 import {
@@ -101,6 +103,21 @@ const EnhancedBioCommanderApp: React.FC = () => {
     setShowGameLobby(false);
   }, []);
 
+  // Zone management handlers
+  const handleZoneUpdate = useCallback((updatedZones: Zone[]) => {
+    setZones(updatedZones);
+    if (updatedZones.length > 0) {
+      setCurrentZone(updatedZones[0]);
+    }
+  }, []);
+
+  const handleResourcesUpdate = useCallback((resources: PlayerResources) => {
+    if (currentPlayer) {
+      setCurrentPlayer({ ...currentPlayer, resources });
+    }
+    setPlayerResources(resources);
+  }, [currentPlayer]);
+
   const handleUnitSelect = useCallback((unitType: UnitType) => {
     setSelectedUnit(unitType);
   }, []);
@@ -184,29 +201,13 @@ const EnhancedBioCommanderApp: React.FC = () => {
     setSelectedZoneIndex(index);
   }, []);
 
-  // Mock data for development
-  const mockPlayerResources: PlayerResources = {
-    energy: 1200,
-    antibodies: 800,
-    stemCells: 150,
-    nutrients: 900
-  };
-
-  const mockZones: Zone[] = [
-    {
-      zoneId: 0,
-      zoneType: ZoneType.Lymphatic,
-      x: 0,
-      y: 0,
-      owner: "player1",
-      grid: Array(16).fill(null).map(() => Array(16).fill(null)),
-      resources: { energy: 100, antibodies: 150, stemCells: 20, nutrients: 80 },
-      unitCount: 5,
-      isBorderZone: true,
-      isControlled: true,
-      connectedZones: [1, 2]
-    }
-  ];
+  // Initialize with empty zones - will be populated by real data
+  const [playerResources, setPlayerResources] = useState<PlayerResources>({
+    energy: 0,
+    antibodies: 0,
+    stemCells: 0,
+    nutrients: 0
+  });
 
   const mockUnlockedUnits = Array(12).fill(false);
   mockUnlockedUnits[0] = true; // T-Cell
@@ -297,12 +298,34 @@ const EnhancedBioCommanderApp: React.FC = () => {
             </div>
           </div>
 
-          {/* Zone Navigation */}
-          <div className="zone-controls">
-            <button onClick={() => handleZoneSwitch('prev')}>◀ Previous Zone</button>
-            <h3>Zone {selectedZoneIndex + 1}</h3>
-            <button onClick={() => handleZoneSwitch('next')}>Next Zone ▶</button>
-          </div>
+          {/* Zone Grid Visualization */}
+          {zones.length > 0 && (
+            <ZoneGrid
+              zones={zones}
+              selectedZone={currentZone}
+              onZoneSelect={(zone) => {
+                setCurrentZone(zone);
+                const zoneIndex = zones.findIndex(z => z.zoneId === zone.zoneId);
+                if (zoneIndex !== -1) {
+                  setSelectedZoneIndex(zoneIndex);
+                }
+              }}
+              playerFaction={selectedFaction || Faction.ImmuneSystem}
+              maxGridSize={8}
+            />
+          )}
+
+          {/* Real Zone Management */}
+          {solanaService && gameState && selectedFaction && (
+            <ZoneManager
+              solanaService={solanaService}
+              gameId={new PublicKey(gameState.gameId.toString())}
+              playerFaction={selectedFaction}
+              playerResources={currentPlayer?.resources || { energy: 0, antibodies: 0, stemCells: 0, nutrients: 0 }}
+              onZoneUpdate={handleZoneUpdate}
+              onResourcesUpdate={handleResourcesUpdate}
+            />
+          )}
 
           {/* Main Game Area */}
           <div className="main-game-area">
@@ -311,14 +334,14 @@ const EnhancedBioCommanderApp: React.FC = () => {
               <UnitPanel
                 selectedUnit={selectedUnit}
                 onUnitSelect={handleUnitSelect}
-                playerResources={mockPlayerResources}
+                playerResources={playerResources}
                 currentPlayer="1"
                 playerFaction={selectedFaction || Faction.ImmuneSystem}
                 unlockedUnits={mockUnlockedUnits}
               />
               
               <ZoneMinimap
-                zones={mockZones}
+                zones={zones}
                 selectedZoneIndex={selectedZoneIndex}
                 onZoneSelect={handleZoneSelect}
               />
@@ -326,9 +349,9 @@ const EnhancedBioCommanderApp: React.FC = () => {
 
             {/* Center - Game Grid */}
             <div className="center-panel">
-              {mockZones[selectedZoneIndex] && (
+              {zones[selectedZoneIndex] && (
                 <BioGrid
-                  zone={mockZones[selectedZoneIndex]}
+                  zone={zones[selectedZoneIndex]}
                   onCellClick={handleCellClick}
                   selectedUnit={selectedUnit}
                   currentPlayer="1"
@@ -354,12 +377,12 @@ const EnhancedBioCommanderApp: React.FC = () => {
 
       {/* Zone Expansion Modal */}
       <AnimatePresence>
-        {showZoneExpansion && mockZones[selectedZoneIndex] && (
+        {showZoneExpansion && zones[selectedZoneIndex] && (
           <ZoneExpansion
-            currentZone={mockZones[selectedZoneIndex]}
-            adjacentZones={mockZones.filter((_, index) => index !== selectedZoneIndex)}
+            currentZone={zones[selectedZoneIndex]}
+            adjacentZones={zones.filter((_, index) => index !== selectedZoneIndex)}
             playerFaction={selectedFaction || Faction.ImmuneSystem}
-            playerResources={mockPlayerResources}
+            playerResources={playerResources}
             onExpand={handleZoneExpansion}
             isVisible={showZoneExpansion}
             onClose={() => setShowZoneExpansion(false)}
@@ -372,8 +395,8 @@ const EnhancedBioCommanderApp: React.FC = () => {
       <AnimatePresence>
         {showResourceManager && (
           <ResourceManager
-            playerResources={mockPlayerResources}
-            zoneResources={mockZones.map(z => z.resources)}
+            playerResources={playerResources}
+            zoneResources={zones.map(z => z.resources)}
             playerFaction={selectedFaction || Faction.ImmuneSystem}
             currentTurn={1}
             isVisible={showResourceManager}

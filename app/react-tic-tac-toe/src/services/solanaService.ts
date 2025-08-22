@@ -445,4 +445,87 @@ export class BioCommanderSolanaService {
       })
     );
   }
+
+  // Send transaction to the network
+  async sendTransaction(transaction: Transaction): Promise<string> {
+    try {
+      const signature = await this.provider.sendAndConfirm(transaction);
+      return signature;
+    } catch (error) {
+      console.error('Failed to send transaction:', error);
+      throw error;
+    }
+  }
+
+  // Confirm transaction
+  async confirmTransaction(signature: string): Promise<void> {
+    try {
+      const confirmation = await this.connection.confirmTransaction(signature, 'confirmed');
+      if (confirmation.value.err) {
+        throw new Error('Transaction failed');
+      }
+    } catch (error) {
+      console.error('Failed to confirm transaction:', error);
+      throw error;
+    }
+  }
+
+  // Expand zone with different expansion types
+  async expandZone(
+    gameId: PublicKey,
+    playerFaction: Faction,
+    expansionType: 'CreateNewZone' | 'InfectionSpread' | 'ImmuneResponse' | 'ConquerZone',
+    newZoneType?: ZoneType,
+    sourceZoneId?: number,
+    targetZoneId?: number
+  ): Promise<Transaction> {
+    const worldPda = FindWorldPda({ worldId: new BN(this.WORLD_INSTANCE_ID) });
+    
+    const applySystem = await ApplySystem({
+      authority: this.provider.wallet.publicKey!,
+      systemId: this.EXPAND_ZONE,
+      world: worldPda,
+      entities: [
+        {
+          entity: gameId,
+          components: [
+            { componentId: this.GAME_COMPONENT },
+            { componentId: this.PLAYER_COMPONENT },
+            { componentId: this.ZONE_COMPONENT }
+          ]
+        }
+      ],
+      args: {
+        expansion_type: this.expansionTypeToNumber(expansionType),
+        new_zone_type: newZoneType ? this.zoneTypeToNumber(newZoneType) : 0,
+        source_zone_id: sourceZoneId || 0,
+        target_zone_id: targetZoneId || 0
+      }
+    });
+
+    return applySystem.transaction;
+  }
+
+  // Convert expansion type to number for Solana program
+  private expansionTypeToNumber(expansionType: string): number {
+    switch (expansionType) {
+      case 'CreateNewZone': return 0;
+      case 'InfectionSpread': return 1;
+      case 'ImmuneResponse': return 2;
+      case 'ConquerZone': return 3;
+      default: return 0;
+    }
+  }
+
+  // Convert zone type to number for Solana program
+  private zoneTypeToNumber(zoneType: ZoneType): number {
+    switch (zoneType) {
+      case ZoneType.Circulatory: return 0;
+      case ZoneType.Tissue: return 1;
+      case ZoneType.Lymphatic: return 2;
+      case ZoneType.Barrier: return 3;
+      case ZoneType.Organ: return 4;
+      default: return 1;
+    }
+  }
 }
