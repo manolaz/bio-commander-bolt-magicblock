@@ -78,8 +78,8 @@ const App: React.FC = () => {
     // Initialize the components clients to access the parsed account data
     useEffect(() => {
         const initializeComponents = async () => {
-            playersComponentClient.current = await getComponentsClient(PLAYERS_COMPONENT);
-            gridComponentClient.current = await getComponentsClient(GRID_COMPONENT);
+            playersComponentClient.current = await getComponentsClient(PLAYER_COMPONENT);
+            gridComponentClient.current = await getComponentsClient(ZONE_COMPONENT);
         };
         initializeComponents().catch(console.error);
     }, [connection, getComponentsClient]);
@@ -222,11 +222,11 @@ const App: React.FC = () => {
         if (gridComponentSubscriptionId && gridComponentSubscriptionId.current) await connection.removeAccountChangeListener(gridComponentSubscriptionId.current);
 
         // Subscribe to players changes
-        const playersComponent = FindComponentPda({ componentId: PLAYERS_COMPONENT, entity: entityMatch.current });
+        const playersComponent = FindComponentPda({ componentId: PLAYER_COMPONENT, entity: entityMatch.current });
         playersComponentSubscriptionId.current = connection.onAccountChange(playersComponent, handlePlayersComponentChange, 'processed');
 
         // Subscribe to grid changes
-        const gridComponent = FindComponentPda({ componentId: GRID_COMPONENT, entity: entityMatch.current });
+        const gridComponent = FindComponentPda({ componentId: ZONE_COMPONENT, entity: entityMatch.current });
         gridComponentSubscriptionId.current = connection.onAccountChange(gridComponent, handleGridComponentChange, 'processed');
 
         // @ts-ignore
@@ -308,14 +308,14 @@ const App: React.FC = () => {
         const initGridIx = (await InitializeComponent({
             payer: publicKey,
             entity: entityMatch.current,
-            componentId: GRID_COMPONENT,
+            componentId: ZONE_COMPONENT,
         })).instruction;
 
         // Initialize the player component
         const initPlayersIx = (await InitializeComponent({
             payer: publicKey,
             entity: addEntity.entityPda,
-            componentId: PLAYERS_COMPONENT,
+            componentId: PLAYER_COMPONENT,
         })).instruction;
 
         // Join the game
@@ -326,7 +326,7 @@ const App: React.FC = () => {
             entities: [
                 {
                     entity: addEntity.entityPda,
-                    components: [{ componentId: PLAYERS_COMPONENT }]
+                    components: [{ componentId: PLAYER_COMPONENT }]
                 }
             ]
         })).instruction;
@@ -358,7 +358,7 @@ const App: React.FC = () => {
             entities: [
                 {
                     entity,
-                    components: [{ componentId: PLAYERS_COMPONENT }]
+                    components: [{ componentId: PLAYER_COMPONENT }]
                 }
             ]
         });
@@ -391,7 +391,7 @@ const App: React.FC = () => {
             entities: [
                 {
                     entity: entityMatch.current,
-                    components: [{ componentId: GRID_COMPONENT }, { componentId: PLAYERS_COMPONENT }]
+                    components: [{ componentId: ZONE_COMPONENT }, { componentId: PLAYER_COMPONENT }]
                 }
             ],
             args: {

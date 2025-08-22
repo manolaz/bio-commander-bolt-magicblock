@@ -105,6 +105,20 @@ export interface Cell {
   owner?: string;
 }
 
+export interface Unit {
+  unitId: number;
+  unitType: UnitType;
+  health: number;
+  maxHealth: number;
+  owner: string;
+  x: number;
+  y: number;
+  zoneId: number;
+  movementRange: number;
+  hasActed: boolean;
+  isAlive: boolean;
+}
+
 export interface Zone {
   zoneId: number;
   zoneType: ZoneType;
