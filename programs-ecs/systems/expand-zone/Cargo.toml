@@ -1,0 +1,24 @@
+[package]
+name = "expand-zone"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+crate-type = ["cdylib", "lib"]
+name = "expand_zone"
+
+[features]
+default = []
+cpi = ["no-entrypoint"]
+no-entrypoint = []
+no-idl = []
+no-log-ix-name = []
+idl-build = ["anchor-lang/idl-build"]
+
+[dependencies]
+anchor-lang = { workspace = true }
+bolt-lang = { workspace = true }
+players = { workspace = true }
+grid = { workspace = true }
+game = { workspace = true }
+unit = { workspace = true }

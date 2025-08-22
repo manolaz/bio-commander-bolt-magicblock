@@ -8,6 +8,8 @@ resolver = "2"
 [workspace.dependencies]
 players = { path = "programs-ecs/components/players", features = ["cpi"] }
 grid = { path = "programs-ecs/components/grid", features = ["cpi"] }
+unit = { path = "programs-ecs/components/unit", features = ["cpi"] }
+game = { path = "programs-ecs/components/game", features = ["cpi"] }
 bolt-lang = "0.1.11"
 anchor-lang = "0.30.1"
 

@@ -5,10 +5,16 @@ resolution = true
 skip-lint = false
 
 [programs.localnet]
+# Components
 grid = "9EoKMqQqrgRAxVED34q17e466RKme5sTUkuCqUGH4bij"
+players = "HLzXXTbMUjemRSQr5LHjtZgBvqyieuhY8wE29xYzhZSX"
+unit = "UNiT111111111111111111111111111111111111111"
+game = "GAMe111111111111111111111111111111111111111"
+
+# Systems
 join-game = "7TsTc97MB21EKbh2RetcWsGWRJ4xuMkPKKD4DcMJ2Sms"
 play = "EFLfG5icLgcUYwuSnuScoYptcrgh8WYLHx33M4wvTPFv"
-players = "HLzXXTbMUjemRSQr5LHjtZgBvqyieuhY8wE29xYzhZSX"
+expand-zone = "EXPa111111111111111111111111111111111111111"
 
 [registry]
 url = "https://api.apr.dev"
