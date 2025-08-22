@@ -131,7 +131,7 @@ const App: React.FC = () => {
             return;
         }
         
-        const newGameState = placeUnit(gameState, gameState.zones[selectedZoneIndex].id, row, col, selectedUnit);
+        const newGameState = placeUnit(gameState, gameState.zones[selectedZoneIndex].zoneId, row, col, selectedUnit);
         if (newGameState !== gameState) {
             setGameState(newGameState);
             setSelectedUnit(null);
