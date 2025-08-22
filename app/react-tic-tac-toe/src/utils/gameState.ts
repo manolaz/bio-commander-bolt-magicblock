@@ -1,4 +1,4 @@
-import { Zone, ZoneType, Cell, CellType } from '../components/BioGrid';
+import { Zone, ZoneType, Cell } from '../types/bioCommander';
 
 export interface GameState {
     zones: Zone[];

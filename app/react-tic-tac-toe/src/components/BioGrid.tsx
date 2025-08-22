@@ -6,7 +6,7 @@ import { Zone, Cell, ZoneType, UnitType, UNIT_DATA } from '../types/bioCommander
 type BioGridProps = {
     zone: Zone;
     onCellClick: (row: number, col: number) => void;
-    selectedUnit?: UnitType;
+    selectedUnit?: UnitType | null;
     currentPlayer?: string;
     selectedCell?: { row: number; col: number } | null;
     onCellHover?: (row: number, col: number) => void;

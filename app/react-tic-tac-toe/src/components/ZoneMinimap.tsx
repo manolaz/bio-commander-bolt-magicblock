@@ -1,7 +1,7 @@
 import React from 'react';
 import "./ZoneMinimap.scss";
 import { motion } from "framer-motion";
-import { Zone, ZoneType } from './BioGrid';
+import { Zone, ZoneType } from '../types/bioCommander';
 
 type ZoneMinimapProps = {
     zones: Zone[];
@@ -65,22 +65,22 @@ const ZoneMinimap: React.FC<ZoneMinimapProps> = ({ zones, selectedZoneIndex, onZ
                     
                     return (
                         <motion.div
-                            key={zone.id}
+                            key={zone.zoneId}
                             className={`zone-card ${isSelected ? 'selected' : ''} control-${dominantPlayer}`}
                             onClick={() => onZoneSelect(index)}
                             whileHover={{ scale: 1.05 }}
                             whileTap={{ scale: 0.95 }}
-                            style={{ borderColor: getZoneColor(zone.type) }}
+                            style={{ borderColor: getZoneColor(zone.zoneType) }}
                             initial={{ opacity: 0, scale: 0.8 }}
                             animate={{ opacity: 1, scale: 1 }}
                             transition={{ delay: index * 0.1 }}
                         >
-                            <div className="zone-icon" style={{ color: getZoneColor(zone.type) }}>
-                                {getZoneIcon(zone.type)}
+                            <div className="zone-icon" style={{ color: getZoneColor(zone.zoneType) }}>
+                                {getZoneIcon(zone.zoneType)}
                             </div>
                             
                             <div className="zone-info">
-                                <h5>{zone.name}</h5>
+                                <h5>Zone {zone.zoneId}: {zone.zoneType}</h5>
                                 <div className="zone-stats">
                                     <div className="control-bars">
                                         <div className="control-bar player1" style={{ 
@@ -103,9 +103,9 @@ const ZoneMinimap: React.FC<ZoneMinimapProps> = ({ zones, selectedZoneIndex, onZ
                                 <div className="resource">🍎{zone.resources.nutrients}</div>
                             </div>
                             
-                            {zone.connections.length > 0 && (
+                            {zone.connectedZones.filter(z => z !== null).length > 0 && (
                                 <div className="connections-indicator">
-                                    <span>🔗{zone.connections.length}</span>
+                                    <span>🔗{zone.connectedZones.filter(z => z !== null).length}</span>
                                 </div>
                             )}
                         </motion.div>
