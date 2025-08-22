@@ -1,4 +1,4 @@
-import { Zone, ZoneType, Cell } from '../types/bioCommander';
+import { Zone, ZoneType, Cell, UnitType, UNIT_DATA } from '../types/bioCommander';
 
 export interface GameState {
     zones: Zone[];
@@ -9,7 +9,7 @@ export interface GameState {
         player2: PlayerResources;
     };
     gamePhase: GamePhase;
-    selectedZone: string | null;
+    selectedZone: number | null;
 }
 
 export interface PlayerResources {
@@ -28,7 +28,9 @@ export enum GamePhase {
 }
 
 export const createEmptyCell = (): Cell => ({
-    type: CellType.Empty
+    unitType: undefined,
+    owner: undefined,
+    health: undefined
 });
 
 export const createEmptyGrid = (): Cell[][] => {
@@ -37,38 +39,44 @@ export const createEmptyGrid = (): Cell[][] => {
     );
 };
 
-export const createInitialZone = (id: string, type: ZoneType, name: string): Zone => ({
-    id,
-    type,
-    name,
+export const createInitialZone = (zoneId: number, zoneType: ZoneType): Zone => ({
+    zoneId,
+    zoneType,
+    x: 0,
+    y: 0,
+    owner: "11111111111111111111111111111112", // neutral
     grid: createEmptyGrid(),
-    connections: [],
     resources: {
-        energy: type === ZoneType.Circulatory ? 20 : 10,
-        antibodies: type === ZoneType.Lymphatic ? 15 : 5,
-        nutrients: type === ZoneType.Tissue ? 25 : 10
-    }
+        energy: zoneType === ZoneType.Circulatory ? 20 : 10,
+        antibodies: zoneType === ZoneType.Lymphatic ? 15 : 5,
+        nutrients: zoneType === ZoneType.Tissue ? 25 : 10,
+        stemCells: zoneType === ZoneType.Lymphatic ? 5 : 2
+    },
+    unitCount: 0,
+    isBorderZone: true,
+    isControlled: false,
+    connectedZones: []
 });
 
 export const createInitialGameState = (): GameState => {
     // Create starting zones based on Bio Commander concept
-    const bloodstreamZone = createInitialZone("bloodstream", ZoneType.Circulatory, "Bloodstream");
-    const lymphNodeZone = createInitialZone("lymph-node", ZoneType.Lymphatic, "Lymph Node");
-    const infectedTissueZone = createInitialZone("infected-tissue", ZoneType.Tissue, "Infected Tissue");
+    const bloodstreamZone = createInitialZone(1, ZoneType.Circulatory);
+    const lymphNodeZone = createInitialZone(2, ZoneType.Lymphatic);
+    const infectedTissueZone = createInitialZone(3, ZoneType.Tissue);
     
     // Connect zones
-    bloodstreamZone.connections = ["lymph-node", "infected-tissue"];
-    lymphNodeZone.connections = ["bloodstream"];
-    infectedTissueZone.connections = ["bloodstream"];
+    bloodstreamZone.connectedZones = [2, 3];
+    lymphNodeZone.connectedZones = [1];
+    infectedTissueZone.connectedZones = [1];
     
     // Add some initial tissue and pathogens
-    infectedTissueZone.grid[8][8] = { type: CellType.Tissue, health: 100 };
-    infectedTissueZone.grid[7][7] = { type: CellType.Pathogen, owner: "2", health: 80 };
-    infectedTissueZone.grid[9][9] = { type: CellType.Pathogen, owner: "2", health: 80 };
+    infectedTissueZone.grid[8][8] = { unitType: UnitType.Bacteria, owner: "neutral", health: 100 };
+    infectedTissueZone.grid[7][7] = { unitType: UnitType.Virus, owner: "2", health: 80 };
+    infectedTissueZone.grid[9][9] = { unitType: UnitType.Bacteria, owner: "2", health: 80 };
     
     // Add some initial immune presence
-    bloodstreamZone.grid[4][4] = { type: CellType.ImmuneCell, owner: "1", health: 100 };
-    lymphNodeZone.grid[8][8] = { type: CellType.ImmuneCell, owner: "1", health: 100 };
+    bloodstreamZone.grid[4][4] = { unitType: UnitType.TCell, owner: "1", health: 100 };
+    lymphNodeZone.grid[8][8] = { unitType: UnitType.BCell, owner: "1", health: 100 };
     
     return {
         zones: [bloodstreamZone, lymphNodeZone, infectedTissueZone],
@@ -89,7 +97,7 @@ export const createInitialGameState = (): GameState => {
             }
         },
         gamePhase: GamePhase.Deploy,
-        selectedZone: "bloodstream"
+        selectedZone: 1
     };
 };
 
@@ -97,7 +105,7 @@ export const canPlaceUnit = (
     zone: Zone, 
     row: number, 
     col: number, 
-    unitType: CellType,
+    unitType: UnitType,
     player: string,
     resources: PlayerResources
 ): { canPlace: boolean; reason?: string } => {
@@ -107,17 +115,21 @@ export const canPlaceUnit = (
     }
     
     // Check if cell is empty
-    if (zone.grid[row][col].type !== CellType.Empty) {
+    const cell = zone.grid[row][col];
+    if (cell && cell.unitType !== undefined) {
         return { canPlace: false, reason: "Cell occupied" };
     }
     
-    // Check unit type restrictions
-    if (player === "1" && unitType === CellType.Pathogen) {
-        return { canPlace: false, reason: "Cannot place enemy units" };
+    // Check unit type restrictions based on faction
+    const isPathogenUnit = [UnitType.Virus, UnitType.Bacteria, UnitType.Fungus, UnitType.Parasite, UnitType.CancerCell, UnitType.Toxin].includes(unitType);
+    const isImmuneUnit = [UnitType.TCell, UnitType.BCell, UnitType.Macrophage, UnitType.NeutrophilCell, UnitType.DendriticCell, UnitType.NaturalKillerCell].includes(unitType);
+    
+    if (player === "1" && !isImmuneUnit) {
+        return { canPlace: false, reason: "Player 1 can only place immune cells" };
     }
     
-    if (player === "2" && unitType !== CellType.Pathogen) {
-        return { canPlace: false, reason: "Can only place pathogens" };
+    if (player === "2" && !isPathogenUnit) {
+        return { canPlace: false, reason: "Player 2 can only place pathogens" };
     }
     
     // Check resource costs (simplified)
@@ -129,30 +141,27 @@ export const canPlaceUnit = (
     return { canPlace: true };
 };
 
-export const getUnitCost = (unitType: CellType): { energy: number; antibodies?: number; nutrients?: number } => {
-    switch (unitType) {
-        case CellType.ImmuneCell:
-            return { energy: 10, nutrients: 5 };
-        case CellType.BloodCell:
-            return { energy: 15, nutrients: 8 };
-        case CellType.Antibody:
-            return { energy: 5, antibodies: 1 };
-        case CellType.Pathogen:
-            return { energy: 8, nutrients: 3 };
-        default:
-            return { energy: 0 };
+export const getUnitCost = (unitType: UnitType): { energy: number; antibodies?: number; nutrients?: number } => {
+    const unitData = UNIT_DATA[unitType];
+    if (unitData) {
+        return {
+            energy: unitData.cost.energy,
+            antibodies: unitData.cost.antibodies,
+            nutrients: unitData.cost.nutrients
+        };
     }
+    return { energy: 0 };
 };
 
 export const placeUnit = (
     gameState: GameState,
-    zoneId: string,
+    zoneId: number,
     row: number,
     col: number,
-    unitType: CellType
+    unitType: UnitType
 ): GameState => {
     const newState = { ...gameState };
-    const zone = newState.zones.find(z => z.id === zoneId);
+    const zone = newState.zones.find(z => z.zoneId === zoneId);
     
     if (!zone) return gameState;
     
@@ -164,7 +173,7 @@ export const placeUnit = (
     
     // Place the unit
     zone.grid[row][col] = {
-        type: unitType,
+        unitType: unitType,
         owner: player,
         health: getUnitHealth(unitType)
     };
@@ -178,21 +187,9 @@ export const placeUnit = (
     return newState;
 };
 
-export const getUnitHealth = (unitType: CellType): number => {
-    switch (unitType) {
-        case CellType.ImmuneCell:
-            return 100;
-        case CellType.BloodCell:
-            return 80;
-        case CellType.Antibody:
-            return 60;
-        case CellType.Pathogen:
-            return 70;
-        case CellType.Tissue:
-            return 120;
-        default:
-            return 50;
-    }
+export const getUnitHealth = (unitType: UnitType): number => {
+    const unitData = UNIT_DATA[unitType];
+    return unitData ? unitData.stats.maxHealth : 50;
 };
 
 export const switchPlayer = (gameState: GameState): GameState => {
@@ -208,8 +205,8 @@ export const generateResources = (gameState: GameState): GameState => {
     
     // Generate resources based on controlled zones and units
     newState.zones.forEach(zone => {
-        const player1Units = zone.grid.flat().filter(cell => cell.owner === "1").length;
-        const player2Units = zone.grid.flat().filter(cell => cell.owner === "2").length;
+        const player1Units = zone.grid.flat().filter(cell => cell && cell.owner === "1").length;
+        const player2Units = zone.grid.flat().filter(cell => cell && cell.owner === "2").length;
         
         if (player1Units > player2Units) {
             // Player 1 controls this zone
@@ -237,8 +234,8 @@ export const checkVictoryConditions = (gameState: GameState): { winner?: string;
     // Zone control victory - control majority of zones
     const zoneControl = gameState.zones.map(zone => {
         const cells = zone.grid.flat();
-        const player1Units = cells.filter(cell => cell.owner === "1").length;
-        const player2Units = cells.filter(cell => cell.owner === "2").length;
+        const player1Units = cells.filter(cell => cell && cell.owner === "1").length;
+        const player2Units = cells.filter(cell => cell && cell.owner === "2").length;
         
         if (player1Units > player2Units) return "1";
         if (player2Units > player1Units) return "2";
@@ -259,8 +256,8 @@ export const checkVictoryConditions = (gameState: GameState): { winner?: string;
     
     // Elimination victory - opponent has no units
     const allCells = gameState.zones.flatMap(zone => zone.grid.flat());
-    const player1Units = allCells.filter(cell => cell.owner === "1").length;
-    const player2Units = allCells.filter(cell => cell.owner === "2").length;
+    const player1Units = allCells.filter(cell => cell && cell.owner === "1").length;
+    const player2Units = allCells.filter(cell => cell && cell.owner === "2").length;
     
     if (player1Units === 0) {
         return { winner: "2", reason: "All immune defenses have been eliminated!" };

@@ -1,7 +1,8 @@
 import React, {useCallback, useEffect, useRef, useState} from "react";
 import {AnimatePresence, motion} from "framer-motion";
 import Button from "./components/Button";
-import BioGrid, { CellType } from "./components/BioGrid";
+import BioGrid from "./components/BioGrid";
+import { UnitType } from "./types/bioCommander";
 import UnitPanel from "./components/UnitPanel";
 import ZoneMinimap from "./components/ZoneMinimap";
 import {
@@ -43,7 +44,7 @@ const App: React.FC = () => {
     
     // Bio Commander game state
     const [gameState, setGameState] = useState<GameState>(createInitialGameState());
-    const [selectedUnit, setSelectedUnit] = useState<CellType | null>(null);
+    const [selectedUnit, setSelectedUnit] = useState<UnitType | null>(null);
     const [selectedZoneIndex, setSelectedZoneIndex] = useState<number>(0);
     const [victoryResult, setVictoryResult] = useState<{winner?: string; reason?: string}>({});
     
@@ -144,7 +145,7 @@ const App: React.FC = () => {
         }
     }, [gameState, selectedUnit, selectedZoneIndex, publicKey]);
 
-    const handleUnitSelect = useCallback((unitType: CellType) => {
+    const handleUnitSelect = useCallback((unitType: UnitType) => {
         setSelectedUnit(unitType);
     }, []);
 
