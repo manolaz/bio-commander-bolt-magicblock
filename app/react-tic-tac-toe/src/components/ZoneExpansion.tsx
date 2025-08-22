@@ -104,6 +104,7 @@ const ZoneExpansion: React.FC<ZoneExpansionProps> = ({
   };
 
   const getValidTargetZones = (expansionType: ExpansionType): Zone[] => {
+    const neutralOwner = "11111111111111111111111111111112"; // Neutral owner key
     switch (expansionType) {
       case ExpansionType.InfectionSpread:
         return adjacentZones.filter(zone => 
@@ -111,11 +112,11 @@ const ZoneExpansion: React.FC<ZoneExpansionProps> = ({
         );
       case ExpansionType.ImmuneResponse:
         return adjacentZones.filter(zone => 
-          zone.owner === "neutral" || zone.owner !== playerFaction.toString()
+          zone.owner === neutralOwner || zone.owner !== playerFaction.toString()
         );
       case ExpansionType.ConquerZone:
         return adjacentZones.filter(zone => 
-          zone.owner !== playerFaction.toString() && zone.owner !== "neutral"
+          zone.owner !== playerFaction.toString() && zone.owner !== neutralOwner
         );
       default:
         return adjacentZones;
@@ -345,7 +346,7 @@ const ZoneExpansion: React.FC<ZoneExpansionProps> = ({
                         </div>
                         <div className="zone-details">
                           <span>Position: ({zone.x}, {zone.y})</span>
-                          <span>Owner: {zone.owner === "neutral" ? "Neutral" : `Player ${zone.owner}`}</span>
+                          <span>Owner: {zone.owner === "11111111111111111111111111111112" ? "Neutral" : `Player ${zone.owner}`}</span>
                           <span>Units: {zone.unitCount}</span>
                         </div>
                       </motion.div>

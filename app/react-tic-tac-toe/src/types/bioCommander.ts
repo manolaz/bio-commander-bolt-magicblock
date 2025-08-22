@@ -122,6 +122,7 @@ export interface Unit {
 export interface Zone {
   zoneId: number;
   zoneType: ZoneType;
+  name: string; // Added name property for display purposes
   x: number;
   y: number;
   owner: string;

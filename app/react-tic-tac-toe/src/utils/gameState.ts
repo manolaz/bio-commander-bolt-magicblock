@@ -42,6 +42,7 @@ export const createEmptyGrid = (): Cell[][] => {
 export const createInitialZone = (zoneId: number, zoneType: ZoneType): Zone => ({
     zoneId,
     zoneType,
+    name: `${zoneType} Zone ${zoneId}`, // Generate name from zone type and ID
     x: 0,
     y: 0,
     owner: "11111111111111111111111111111112", // neutral

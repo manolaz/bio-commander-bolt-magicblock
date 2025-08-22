@@ -75,10 +75,10 @@ const ResourceManager: React.FC<ResourceManagerProps> = ({
 
   const getTotalZoneResources = (): PlayerResources => {
     return zoneResources.reduce((total, zone) => ({
-      energy: total.energy + zone.energy,
-      antibodies: total.antibodies + zone.antibodies,
-      stemCells: total.stemCells + zone.stemCells,
-      nutrients: total.nutrients + zone.nutrients
+      energy: total.energy + zone.resources.energy,
+      antibodies: total.antibodies + zone.resources.antibodies,
+      stemCells: total.stemCells + zone.resources.stemCells,
+      nutrients: total.nutrients + zone.resources.nutrients
     }), { energy: 0, antibodies: 0, stemCells: 0, nutrients: 0 });
   };
 
