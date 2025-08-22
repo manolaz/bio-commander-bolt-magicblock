@@ -24,13 +24,16 @@ import { GameState, createInitialGameState, placeUnit, switchPlayer, generateRes
 
 const WORLD_INSTANCE_ID = 1721;
 
-// Components
-const GRID_COMPONENT = new PublicKey("9EoKMqQqrgRAxVED34q17e466RKme5sTUkuCqUGH4bij");
-const PLAYERS_COMPONENT = new PublicKey("HLzXXTbMUjemRSQr5LHjtZgBvqyieuhY8wE29xYzhZSX");
+// Bio Commander Components
+const ZONE_COMPONENT = new PublicKey("9EoKMqQqrgRAxVED34q17e466RKme5sTUkuCqUGH4bij"); // Renamed from GRID
+const PLAYER_COMPONENT = new PublicKey("HLzXXTbMUjemRSQr5LHjtZgBvqyieuhY8wE29xYzhZSX"); // Renamed from PLAYERS
+const UNIT_COMPONENT = new PublicKey("UNiT111111111111111111111111111111111111111");
+const GAME_COMPONENT = new PublicKey("GAMe111111111111111111111111111111111111111");
 
-// Systems
+// Bio Commander Systems
 const JOIN_GAME = new PublicKey("7TsTc97MB21EKbh2RetcWsGWRJ4xuMkPKKD4DcMJ2Sms");
 const PLAY = new PublicKey("EFLfG5icLgcUYwuSnuScoYptcrgh8WYLHx33M4wvTPFv");
+const EXPAND_ZONE = new PublicKey("EXPa111111111111111111111111111111111111111");
 
 const App: React.FC = () => {
     let { connection } = useConnection();

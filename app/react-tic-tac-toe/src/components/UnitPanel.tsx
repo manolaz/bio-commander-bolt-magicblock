@@ -1,94 +1,56 @@
 import React from 'react';
 import "./UnitPanel.scss";
 import { motion } from "framer-motion";
-import { CellType } from './BioGrid';
-
-interface UnitInfo {
-    type: CellType;
-    name: string;
-    icon: string;
-    cost: {
-        energy: number;
-        antibodies?: number;
-        nutrients?: number;
-    };
-    description: string;
-    stats: {
-        health: number;
-        attack?: number;
-        defense?: number;
-        movement?: number;
-    };
-}
-
-const UNIT_DATA: UnitInfo[] = [
-    {
-        type: CellType.ImmuneCell,
-        name: "T-Cell",
-        icon: "🛡️",
-        cost: { energy: 10, nutrients: 5 },
-        description: "Primary immune defender, attacks pathogens",
-        stats: { health: 100, attack: 25, defense: 15, movement: 2 }
-    },
-    {
-        type: CellType.BloodCell,
-        name: "White Blood Cell",
-        icon: "🩸",
-        cost: { energy: 15, nutrients: 8 },
-        description: "Fast-moving immune cell, good for scouting",
-        stats: { health: 80, attack: 20, defense: 10, movement: 3 }
-    },
-    {
-        type: CellType.Antibody,
-        name: "Antibody",
-        icon: "💊",
-        cost: { energy: 5, antibodies: 1 },
-        description: "Defensive unit that provides area protection",
-        stats: { health: 60, attack: 15, defense: 25, movement: 1 }
-    },
-    {
-        type: CellType.Pathogen,
-        name: "Virus",
-        icon: "🦠",
-        cost: { energy: 8, nutrients: 3 },
-        description: "Infectious agent that spreads and damages tissue",
-        stats: { health: 70, attack: 30, defense: 5, movement: 2 }
-    }
-];
+import { UnitType, UNIT_DATA, Faction, PlayerResources, SpecialAbility } from '../types/bioCommander';
 
 type UnitPanelProps = {
-    selectedUnit: CellType | null;
-    onUnitSelect: (unitType: CellType) => void;
-    playerResources: {
-        energy: number;
-        antibodies: number;
-        nutrients: number;
-    };
+    selectedUnit: UnitType | null;
+    onUnitSelect: (unitType: UnitType) => void;
+    playerResources: PlayerResources;
     currentPlayer: string;
+    playerFaction: Faction;
+    unlockedUnits: boolean[];
 };
 
 const UnitPanel: React.FC<UnitPanelProps> = ({ 
     selectedUnit, 
     onUnitSelect, 
     playerResources,
-    currentPlayer 
+    currentPlayer,
+    playerFaction,
+    unlockedUnits
 }) => {
-    const canAfford = (unit: UnitInfo): boolean => {
+    const canAfford = (unitType: UnitType): boolean => {
+        const unit = UNIT_DATA[unitType];
         if (unit.cost.energy > playerResources.energy) return false;
-        if (unit.cost.antibodies && unit.cost.antibodies > playerResources.antibodies) return false;
-        if (unit.cost.nutrients && unit.cost.nutrients > playerResources.nutrients) return false;
+        if (unit.cost.antibodies > playerResources.antibodies) return false;
+        if (unit.cost.stemCells > playerResources.stemCells) return false;
+        if (unit.cost.nutrients > playerResources.nutrients) return false;
         return true;
     };
 
-    const getUnitAvailability = (unit: UnitInfo): string => {
-        // Simple logic: pathogens for player 2, immune units for player 1
-        if (currentPlayer === "1" && unit.type === CellType.Pathogen) {
-            return "enemy-unit";
+    const getUnitAvailability = (unitType: UnitType): string => {
+        const unit = UNIT_DATA[unitType];
+        const unitIndex = Object.values(UnitType).indexOf(unitType);
+        
+        // Check if unit is unlocked
+        if (!unlockedUnits[unitIndex]) {
+            return "locked";
         }
-        if (currentPlayer === "2" && unit.type !== CellType.Pathogen) {
-            return "ally-unit";
+        
+        // Check faction restrictions
+        if (playerFaction !== unit.faction) {
+            return "wrong-faction";
         }
+        
         return "available";
+    };
+
+    const getAvailableUnits = (): UnitType[] => {
+        return Object.values(UnitType).filter(unitType => {
+            const unit = UNIT_DATA[unitType];
+            return unit.faction === playerFaction;
+        });
     };
 
     return (
@@ -98,27 +60,32 @@ const UnitPanel: React.FC<UnitPanelProps> = ({
                 <div className="player-resources">
                     <span className="resource">⚡ {playerResources.energy}</span>
                     <span className="resource">💊 {playerResources.antibodies}</span>
+                    <span className="resource">🧬 {playerResources.stemCells}</span>
                     <span className="resource">🍎 {playerResources.nutrients}</span>
+                </div>
+                <div className="faction-indicator">
+                    {playerFaction === Faction.ImmuneSystem ? "🛡️ Immune System" : "🦠 Pathogen"}
                 </div>
             </div>
             
             <div className="unit-grid">
-                {UNIT_DATA.map((unit) => {
-                    const isSelected = selectedUnit === unit.type;
-                    const affordable = canAfford(unit);
-                    const availability = getUnitAvailability(unit);
+                {getAvailableUnits().map((unitType) => {
+                    const unit = UNIT_DATA[unitType];
+                    const isSelected = selectedUnit === unitType;
+                    const affordable = canAfford(unitType);
+                    const availability = getUnitAvailability(unitType);
                     const isClickable = affordable && availability === "available";
                     
                     return (
                         <motion.div
-                            key={unit.type}
+                            key={unitType}
                             className={`unit-card ${isSelected ? 'selected' : ''} ${!affordable ? 'unaffordable' : ''} ${availability}`}
-                            onClick={() => isClickable && onUnitSelect(unit.type)}
+                            onClick={() => isClickable && onUnitSelect(unitType)}
                             whileHover={isClickable ? { scale: 1.05 } : {}}
                             whileTap={isClickable ? { scale: 0.95 } : {}}
                             initial={{ opacity: 0, y: 20 }}
                             animate={{ opacity: 1, y: 0 }}
-                            transition={{ delay: UNIT_DATA.indexOf(unit) * 0.1 }}
+                            transition={{ delay: Object.values(UnitType).indexOf(unitType) * 0.05 }}
                         >
                             <div className="unit-icon">{unit.icon}</div>
                             <div className="unit-info">
@@ -127,15 +94,24 @@ const UnitPanel: React.FC<UnitPanelProps> = ({
                                 
                                 <div className="unit-stats">
                                     <div className="stat">❤️ {unit.stats.health}</div>
-                                    {unit.stats.attack && <div className="stat">⚔️ {unit.stats.attack}</div>}
-                                    {unit.stats.defense && <div className="stat">🛡️ {unit.stats.defense}</div>}
-                                    {unit.stats.movement && <div className="stat">👟 {unit.stats.movement}</div>}
+                                    <div className="stat">⚔️ {unit.stats.attack}</div>
+                                    <div className="stat">🛡️ {unit.stats.defense}</div>
+                                    <div className="stat">👟 {unit.stats.movementRange}</div>
+                                </div>
+                                
+                                <div className="special-abilities">
+                                    {unit.specialAbilities.map((ability, index) => (
+                                        <span key={index} className="ability" title={ability}>
+                                            {getAbilityIcon(ability)}
+                                        </span>
+                                    ))}
                                 </div>
                                 
                                 <div className="unit-cost">
                                     <span>⚡{unit.cost.energy}</span>
-                                    {unit.cost.antibodies && <span>💊{unit.cost.antibodies}</span>}
-                                    {unit.cost.nutrients && <span>🍎{unit.cost.nutrients}</span>}
+                                    {unit.cost.antibodies > 0 && <span>💊{unit.cost.antibodies}</span>}
+                                    {unit.cost.stemCells > 0 && <span>🧬{unit.cost.stemCells}</span>}
+                                    {unit.cost.nutrients > 0 && <span>🍎{unit.cost.nutrients}</span>}
                                 </div>
                             </div>
                             
@@ -145,9 +121,15 @@ const UnitPanel: React.FC<UnitPanelProps> = ({
                                 </div>
                             )}
                             
-                            {availability === "enemy-unit" && (
+                            {availability === "locked" && (
+                                <div className="locked-unit">
+                                    🔒 Locked
+                                </div>
+                            )}
+                            
+                            {availability === "wrong-faction" && (
                                 <div className="unavailable-unit">
-                                    Enemy Unit
+                                    Wrong Faction
                                 </div>
                             )}
                         </motion.div>
@@ -162,13 +144,37 @@ const UnitPanel: React.FC<UnitPanelProps> = ({
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
                     >
-                        <p>Selected: <strong>{UNIT_DATA.find(u => u.type === selectedUnit)?.name}</strong></p>
+                        <p>Selected: <strong>{UNIT_DATA[selectedUnit]?.name}</strong></p>
                         <p>Click on an empty cell to place this unit</p>
+                        <div className="selected-abilities">
+                            Special Abilities:
+                            {UNIT_DATA[selectedUnit]?.specialAbilities.map((ability, index) => (
+                                <span key={index} className="ability-name">{ability}</span>
+                            ))}
+                        </div>
                     </motion.div>
                 )}
             </div>
         </div>
     );
+};
+
+const getAbilityIcon = (ability: SpecialAbility): string => {
+    switch (ability) {
+        case SpecialAbility.AntibodyProduction: return "💊";
+        case SpecialAbility.Phagocytosis: return "🍽️";
+        case SpecialAbility.CytokineRelease: return "📡";
+        case SpecialAbility.MemoryResponse: return "🧠";
+        case SpecialAbility.Infiltration: return "🥷";
+        case SpecialAbility.ZoneHealing: return "💚";
+        case SpecialAbility.Replication: return "🔄";
+        case SpecialAbility.Mutation: return "🧬";
+        case SpecialAbility.ToxinRelease: return "☠️";
+        case SpecialAbility.ImmuneEvasion: return "👻";
+        case SpecialAbility.Metastasis: return "🌊";
+        case SpecialAbility.ResourceDrain: return "🩸";
+        default: return "✨";
+    }
 };
 
 export default UnitPanel;
